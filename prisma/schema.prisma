@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  phone          String   @unique
+  name           String?
+  role           Role     @default(PATIENT)
+  createdAt      DateTime @default(now())
+  callerAlerts    Alert[]        @relation("CallerAlerts")
+  responderAlerts Alert[]        @relation("ResponderAlerts")
+  subscriptions   Subscription[]
+}
+
+enum Role {
+  PATIENT
+  RESPONDER
+  DISPATCHER
+  ADMIN
+}
+
+model Alert {
+  id            String      @id @default(cuid())
+  callerId      String
+  caller        User        @relation("CallerAlerts", fields: [callerId], references: [id])
+  responderId   String?
+  responder     User?       @relation("ResponderAlerts", fields: [responderId], references: [id])
+  lat           Float
+  lng           Float
+  emergencyType String
+  triageLevel   TriageLevel @default(PENDING)
+  status        AlertStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+}
+
+enum AlertStatus {
+  PENDING
+  ASSIGNED
+  ENROUTE
+  ONSITE
+  CLOSED
+  CANCELLED
+}
+
+enum TriageLevel {
+  PENDING
+  CRITICAL
+  URGENT
+  STABLE
+}
+
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id])
+  plan            String
+  status          SubscriptionStatus @default(PENDING)
+  fedapayId       String?
+  expiresAt       DateTime?
+  createdAt       DateTime           @default(now())
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
