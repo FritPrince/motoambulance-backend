@@ -7,8 +7,8 @@ import { smsQueue } from '../queues/sms.queue'
 import { notificationQueue } from '../queues/notification.queue'
 
 const createAlertSchema = z.object({
-  lat: z.number({ required_error: 'lat requis' }),
-  lng: z.number({ required_error: 'lng requis' }),
+  lat: z.number({ error: 'lat requis' }),
+  lng: z.number({ error: 'lng requis' }),
   emergencyType: z.string().min(1, 'emergencyType requis'),
 })
 
