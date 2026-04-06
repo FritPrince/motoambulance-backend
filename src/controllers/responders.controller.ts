@@ -80,8 +80,10 @@ export async function reviewApplication(req: Request, res: Response) {
     return res.status(400).json({ error: 'decision doit être APPROVED ou REJECTED' })
   }
 
+  const applicationId = id as string
+
   const application = await prisma.responderApplication.findUnique({
-    where: { id },
+    where: { id: applicationId },
     include: { user: true },
   })
 
@@ -92,8 +94,8 @@ export async function reviewApplication(req: Request, res: Response) {
 
   // Met à jour la demande
   const updated = await prisma.responderApplication.update({
-    where: { id },
-    data: { status: decision, reviewedBy: adminId, reviewNote: note ?? null },
+    where: { id: applicationId },
+    data: { status: decision, reviewedBy: adminId as string, reviewNote: note ?? null },
   })
 
   // Si approuvé → change le rôle de l'utilisateur
