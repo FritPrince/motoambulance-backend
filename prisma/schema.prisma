@@ -16,6 +16,7 @@ model User {
   callerAlerts    Alert[]        @relation("CallerAlerts")
   responderAlerts Alert[]        @relation("ResponderAlerts")
   subscriptions   Subscription[]
+  application     ResponderApplication?
 }
 
 enum Role {
@@ -53,6 +54,25 @@ enum TriageLevel {
   CRITICAL
   URGENT
   STABLE
+}
+
+model ResponderApplication {
+  id             String                    @id @default(cuid())
+  userId         String                    @unique
+  user           User                      @relation(fields: [userId], references: [id])
+  fullName       String
+  certNumber     String
+  status         ResponderApplicationStatus @default(PENDING)
+  reviewedBy     String?
+  reviewNote     String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+}
+
+enum ResponderApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Subscription {

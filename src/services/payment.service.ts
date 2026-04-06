@@ -6,8 +6,8 @@ const PLANS: Record<string, number> = {
 }
 
 export async function createTransaction(plan: string, userPhone: string) {
-  FedaPay.setApiKey(process.env.FEDAPAY_API_KEY!)
-  FedaPay.setEnvironment('sandbox')
+  FedaPay.setApiKey(process.env.FEDAPAY_SECRET_KEY!)
+  FedaPay.setEnvironment(process.env.FEDAPAY_ENV || 'sandbox')
 
   const amount = PLANS[plan]
   if (!amount) throw new Error(`Plan inconnu : ${plan}`)
