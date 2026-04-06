@@ -8,6 +8,9 @@ import respondersRoutes from './routes/responders.routes'
 
 const app = express()
 
+// Render est derrière un reverse proxy — nécessaire pour express-rate-limit
+app.set('trust proxy', 1)
+
 app.use(helmet())
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }))
 
