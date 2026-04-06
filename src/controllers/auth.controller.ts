@@ -13,6 +13,8 @@ export async function requestOtp(req: Request, res: Response) {
 
   const code = Math.floor(100000 + Math.random() * 900000).toString()
 
+  console.log(`[OTP DEV] ${phone} → ${code}`)
+
   await redis.setex(`otp:${phone}`, 600, code)
 
   const at = AfricasTalking({
