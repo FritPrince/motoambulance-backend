@@ -17,15 +17,19 @@ export async function requestOtp(req: Request, res: Response) {
 
   await redis.setex(`otp:${phone}`, 600, code)
 
-  const at = AfricasTalking({
-    apiKey: process.env.AT_API_KEY!,
-    username: process.env.AT_USERNAME!,
-  })
-  const result = await at.SMS.send({
-    to: [phone],
-    message: `Votre code MotoAmbulance : ${code}`,
-  })
-  console.log('[AT SMS]', JSON.stringify(result, null, 2))
+  try {
+    const at = AfricasTalking({
+      apiKey: process.env.AT_API_KEY!,
+      username: process.env.AT_USERNAME!,
+    })
+    const result = await at.SMS.send({
+      to: [phone],
+      message: `Votre code MotoAmbulance : ${code}`,
+    })
+    console.log('[AT SMS]', JSON.stringify(result, null, 2))
+  } catch (err: any) {
+    console.warn('[AT SMS] Erreur envoi (OTP toujours valide) :', err.message)
+  }
 
   return res.json({ success: true })
 }
