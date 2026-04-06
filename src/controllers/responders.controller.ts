@@ -1,12 +1,46 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../lib/prisma'
+import redis from '../lib/redis'
 import { smsQueue } from '../queues/sms.queue'
 
 const applySchema = z.object({
   fullName: z.string().min(2, 'Nom complet requis'),
   certNumber: z.string().min(1, 'Numéro de certification requis'),
 })
+
+// GET /responders/nearby — liste les secouristes AVAILABLE avec leur position
+export async function getNearbyResponders(req: Request, res: Response) {
+  const { lat, lng, radius = '20' } = req.query
+
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'lat et lng requis' })
+  }
+
+  const nearby = await redis.georadius(
+    'responders:positions',
+    parseFloat(lng as string),
+    parseFloat(lat as string),
+    parseFloat(radius as string),
+    'km',
+    'WITHCOORD',
+    'ASC'
+  ) as any[]
+
+  const responders = await Promise.all(
+    nearby.map(async ([id, [rLng, rLat]]: [string, [string, string]]) => {
+      const status = await redis.get(`responder:status:${id}`)
+      if (status !== 'AVAILABLE') return null
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, name: true },
+      })
+      return { id, name: user?.name ?? 'Secouriste', lat: parseFloat(rLat), lng: parseFloat(rLng) }
+    })
+  )
+
+  return res.json(responders.filter(Boolean))
+}
 
 // POST /responders/apply — un patient soumet une demande
 export async function applyAsResponder(req: Request, res: Response) {

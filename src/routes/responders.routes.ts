@@ -6,6 +6,7 @@ import {
   getMyApplication,
   listApplications,
   reviewApplication,
+  getNearbyResponders,
 } from '../controllers/responders.controller'
 
 const router = Router()
@@ -13,6 +14,7 @@ const router = Router()
 // Routes patient
 router.post('/apply', requireAuth, applyAsResponder)
 router.get('/my-application', requireAuth, getMyApplication)
+router.get('/nearby', requireAuth, getNearbyResponders)
 
 // Routes admin uniquement
 router.get('/applications', requireAuth, requireRole('ADMIN'), listApplications)
