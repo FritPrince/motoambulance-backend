@@ -64,16 +64,34 @@ export async function createAlert(req: Request, res: Response) {
       include: { responder: true, caller: true },
     })
 
-    await smsQueue.add({
-      to: updated.caller.phone,
-      message: `Un secouriste a été assigné à votre alerte. Il est en route.`,
+    // Notifie le patient
+    getIo().to(`user:${callerId}`).emit('alert:status_updated', {
+      alertId: updated.id,
+      status: 'ASSIGNED',
+      responder: updated.responder,
     })
 
-    await notificationQueue.add({
-      userId: callerId,
-      title: 'Secouriste assigné',
-      body: 'Un secouriste a été assigné à votre alerte.',
+    // Notifie le secouriste assigné
+    getIo().to(`user:${responderId}`).emit('alert:new', {
+      alertId: updated.id,
+      lat: updated.lat,
+      lng: updated.lng,
+      emergencyType: updated.emergencyType,
+      triageLevel: updated.triageLevel,
+      caller: { name: updated.caller.name, phone: updated.caller.phone },
     })
+
+    try {
+      await smsQueue.add({
+        to: updated.caller.phone,
+        message: `Un secouriste a été assigné à votre alerte. Il est en route.`,
+      })
+      await notificationQueue.add({
+        userId: callerId,
+        title: 'Secouriste assigné',
+        body: 'Un secouriste a été assigné à votre alerte.',
+      })
+    } catch {}
 
     return res.status(201).json(updated)
   }
@@ -188,13 +206,18 @@ export async function updateTriage(req: Request, res: Response) {
   const id = req.params.id as string
   const user = (req as any).user
 
-  if (user.role !== 'DISPATCHER' && user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Réservé aux dispatchers' })
-  }
-
   const parsed = updateTriageSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten().fieldErrors })
+  }
+
+  const existing = await prisma.alert.findUnique({ where: { id } })
+  if (!existing) return res.status(404).json({ error: 'Alerte introuvable' })
+
+  const isCaller = existing.callerId === user.userId
+  const isPrivileged = user.role === 'DISPATCHER' || user.role === 'ADMIN'
+  if (!isCaller && !isPrivileged) {
+    return res.status(403).json({ error: 'Accès interdit' })
   }
 
   const alert = await prisma.alert.update({
