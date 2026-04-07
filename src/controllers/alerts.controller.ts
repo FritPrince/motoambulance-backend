@@ -153,6 +153,32 @@ export async function updateStatus(req: Request, res: Response) {
   return res.json(updated)
 }
 
+// DELETE /alerts/:id/cancel — le patient annule sa propre alerte PENDING
+export async function cancelAlert(req: Request, res: Response) {
+  const id = req.params.id as string
+  const userId = (req as any).user.userId
+
+  const alert = await prisma.alert.findUnique({ where: { id } })
+
+  if (!alert) return res.status(404).json({ error: 'Alerte introuvable' })
+  if (alert.callerId !== userId) return res.status(403).json({ error: 'Accès interdit' })
+  if (alert.status !== 'PENDING') {
+    return res.status(409).json({ error: 'Impossible d\'annuler une alerte déjà assignée.' })
+  }
+
+  const updated = await prisma.alert.update({
+    where: { id },
+    data: { status: 'CANCELLED' },
+  })
+
+  getIo().to(`user:${userId}`).emit('alert:status_updated', {
+    alertId: updated.id,
+    status: 'CANCELLED',
+  })
+
+  return res.json(updated)
+}
+
 export async function updateTriage(req: Request, res: Response) {
   const id = req.params.id as string
   const user = (req as any).user
