@@ -9,7 +9,6 @@ const applySchema = z.object({
   certNumber: z.string().min(1, 'Numéro de certification requis'),
 })
 
-// GET /responders/nearby — liste les secouristes AVAILABLE avec leur position
 export async function getNearbyResponders(req: Request, res: Response) {
   const { lat, lng, radius = '20' } = req.query
 

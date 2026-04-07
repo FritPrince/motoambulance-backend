@@ -118,8 +118,15 @@ export async function updateStatus(req: Request, res: Response) {
 
   const isAssignedResponder = alert.responderId === user.userId
   const isPrivileged = user.role === 'DISPATCHER' || user.role === 'ADMIN'
+  const isCaller = alert.callerId === user.userId
 
-  if (!isAssignedResponder && !isPrivileged) {
+  // Un patient peut uniquement annuler sa propre alerte si elle est encore PENDING
+  const isSelfCancel =
+    isCaller &&
+    parsed.data.status === 'CANCELLED' &&
+    alert.status === 'PENDING'
+
+  if (!isAssignedResponder && !isPrivileged && !isSelfCancel) {
     return res.status(403).json({ error: 'Accès interdit' })
   }
 
