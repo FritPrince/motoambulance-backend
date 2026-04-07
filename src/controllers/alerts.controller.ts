@@ -162,14 +162,19 @@ export async function cancelAlert(req: Request, res: Response) {
 
   if (!alert) return res.status(404).json({ error: 'Alerte introuvable' })
   if (alert.callerId !== userId) return res.status(403).json({ error: 'Accès interdit' })
-  if (alert.status !== 'PENDING') {
-    return res.status(409).json({ error: 'Impossible d\'annuler une alerte déjà assignée.' })
+  if (!['PENDING', 'ASSIGNED'].includes(alert.status)) {
+    return res.status(409).json({ error: 'Impossible d\'annuler : le secouriste est déjà en route.' })
   }
 
   const updated = await prisma.alert.update({
     where: { id },
     data: { status: 'CANCELLED' },
   })
+
+  // Notifie le secouriste assigné s'il y en a un
+  if (alert.responderId) {
+    getIo().to(`user:${alert.responderId}`).emit('alert:cancelled', { alertId: id })
+  }
 
   getIo().to(`user:${userId}`).emit('alert:status_updated', {
     alertId: updated.id,
