@@ -1,8 +1,11 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
+import jwt from 'jsonwebtoken'
 import prisma from '../lib/prisma'
 import redis from '../lib/redis'
 import { smsQueue } from '../queues/sms.queue'
+import { getIo } from '../socket'
+import { sendPush } from '../services/onesignal.service'
 
 const applySchema = z.object({
   fullName: z.string().min(2, 'Nom complet requis'),
@@ -131,22 +134,52 @@ export async function reviewApplication(req: Request, res: Response) {
     data: { status: decision, reviewedBy: adminId as string, reviewNote: note ?? null },
   })
 
-  // Si approuvé → change le rôle de l'utilisateur
+  // Si approuvé → change le rôle + notifie en temps réel
   if (decision === 'APPROVED') {
     await prisma.user.update({
       where: { id: application.userId },
       data: { role: 'RESPONDER', name: application.fullName },
     })
 
-    await smsQueue.add({
-      to: application.user.phone,
-      message: `Félicitations ${application.fullName} ! Votre demande de secouriste MotoAmbulance a été approuvée. Reconnectez-vous pour accéder à votre espace.`,
+    // Nouveau JWT avec le rôle RESPONDER
+    const newToken = jwt.sign(
+      { userId: application.userId, role: 'RESPONDER' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '30d' }
+    )
+
+    // Notifie l'app en temps réel → redirection automatique sans re-login
+    getIo().to(`user:${application.userId}`).emit('user:role_updated', {
+      role: 'RESPONDER',
+      token: newToken,
     })
+
+    // Push notification OneSignal
+    await sendPush(
+      application.userId,
+      'Candidature approuvée',
+      `Félicitations ${application.fullName} ! Vous êtes maintenant secouriste MotoAmbulance.`
+    )
+
+    try {
+      await smsQueue.add({
+        to: application.user.phone,
+        message: `Félicitations ${application.fullName} ! Votre demande de secouriste MotoAmbulance a été approuvée.`,
+      })
+    } catch {}
   } else {
-    await smsQueue.add({
-      to: application.user.phone,
-      message: `MotoAmbulance : Votre demande de secouriste n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.`,
-    })
+    await sendPush(
+      application.userId,
+      'Candidature non retenue',
+      `Votre demande n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.`
+    )
+
+    try {
+      await smsQueue.add({
+        to: application.user.phone,
+        message: `MotoAmbulance : Votre demande de secouriste n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.`,
+      })
+    } catch {}
   }
 
   return res.json(updated)

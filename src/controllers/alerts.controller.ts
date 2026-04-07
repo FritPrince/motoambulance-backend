@@ -4,7 +4,7 @@ import prisma from '../lib/prisma'
 import { findNearestResponder } from '../services/dispatch.service'
 import { getIo } from '../socket'
 import { smsQueue } from '../queues/sms.queue'
-import { notificationQueue } from '../queues/notification.queue'
+import { sendPush } from '../services/onesignal.service'
 
 const createAlertSchema = z.object({
   lat: z.number({ error: 'lat requis' }),
@@ -86,11 +86,7 @@ export async function createAlert(req: Request, res: Response) {
         to: updated.caller.phone,
         message: `Un secouriste a été assigné à votre alerte. Il est en route.`,
       })
-      await notificationQueue.add({
-        userId: callerId,
-        title: 'Secouriste assigné',
-        body: 'Un secouriste a été assigné à votre alerte.',
-      })
+      await sendPush(callerId, 'Secouriste assigné', 'Un secouriste a été assigné à votre alerte.')
     } catch {}
 
     return res.status(201).json(updated)
@@ -160,13 +156,7 @@ export async function updateStatus(req: Request, res: Response) {
     responder: updated.responder,
   })
 
-  try {
-    await notificationQueue.add({
-      userId: updated.callerId,
-      title: 'Mise à jour de votre alerte',
-      body: `Statut : ${updated.status}`,
-    })
-  } catch {}
+  await sendPush(updated.callerId, 'Mise à jour de votre alerte', `Statut : ${updated.status}`)
 
   return res.json(updated)
 }
