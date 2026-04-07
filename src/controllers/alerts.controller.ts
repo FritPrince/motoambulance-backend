@@ -142,11 +142,13 @@ export async function updateStatus(req: Request, res: Response) {
     responder: updated.responder,
   })
 
-  await notificationQueue.add({
-    userId: updated.callerId,
-    title: 'Mise à jour de votre alerte',
-    body: `Statut : ${updated.status}`,
-  })
+  try {
+    await notificationQueue.add({
+      userId: updated.callerId,
+      title: 'Mise à jour de votre alerte',
+      body: `Statut : ${updated.status}`,
+    })
+  } catch {}
 
   return res.json(updated)
 }
