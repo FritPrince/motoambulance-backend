@@ -157,32 +157,11 @@ export async function reviewApplication(req: Request, res: Response) {
       token: newToken,
     })
 
-    // Push notification OneSignal
-    await sendPush(
-      application.userId,
-      'Candidature approuvée',
-      `Félicitations ${application.fullName} ! Vous êtes maintenant secouriste MotoAmbulance.`
-    )
-
-    try {
-      await smsQueue.add({
-        to: application.user.phone,
-        message: `Félicitations ${application.fullName} ! Votre demande de secouriste MotoAmbulance a été approuvée.`,
-      })
-    } catch {}
+    sendPush(application.userId, 'Candidature approuvée', `Félicitations ${application.fullName} ! Vous êtes maintenant secouriste MotoAmbulance.`).catch(() => {})
+    smsQueue.add({ to: application.user.phone, message: `Félicitations ${application.fullName} ! Votre demande de secouriste MotoAmbulance a été approuvée.` }).catch(() => {})
   } else {
-    await sendPush(
-      application.userId,
-      'Candidature non retenue',
-      `Votre demande n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.`
-    )
-
-    try {
-      await smsQueue.add({
-        to: application.user.phone,
-        message: `MotoAmbulance : Votre demande de secouriste n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.`,
-      })
-    } catch {}
+    sendPush(application.userId, 'Candidature non retenue', `Votre demande n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.`).catch(() => {})
+    smsQueue.add({ to: application.user.phone, message: `MotoAmbulance : Votre demande de secouriste n'a pas été approuvée.${note ? ` Motif : ${note}` : ''} Vous pouvez soumettre une nouvelle demande.` }).catch(() => {})
   }
 
   return res.json(updated)
