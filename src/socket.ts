@@ -24,9 +24,10 @@ export function setupSocket(httpServer: HttpServer) {
     const user = (socket as any).user
 
     socket.on('join', (userId: string) => {
-      // Un utilisateur ne peut rejoindre que sa propre room
+      console.log(`[Socket] join reçu — userId: ${userId}, user.userId: ${user.userId}`)
       if (userId === user.userId) {
         socket.join(`user:${userId}`)
+        console.log(`[Socket] Room rejointe : user:${userId}`)
       }
     })
 

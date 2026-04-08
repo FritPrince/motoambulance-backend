@@ -149,7 +149,10 @@ export async function reviewApplication(req: Request, res: Response) {
     )
 
     // Notifie l'app en temps réel → redirection automatique sans re-login
-    getIo().to(`user:${application.userId}`).emit('user:role_updated', {
+    const io = getIo()
+    const room = io.sockets.adapter.rooms.get(`user:${application.userId}`)
+    console.log(`[Dispatch] Emission vers user:${application.userId}, sockets dans la room: ${room?.size ?? 0}`)
+    io.to(`user:${application.userId}`).emit('user:role_updated', {
       role: 'RESPONDER',
       token: newToken,
     })
