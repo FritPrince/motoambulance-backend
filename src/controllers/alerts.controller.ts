@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../lib/prisma'
+import redis from '../lib/redis'
 import { findNearestResponder } from '../services/dispatch.service'
 import { getIo } from '../socket'
 import { smsQueue } from '../queues/sms.queue'
@@ -187,6 +188,47 @@ export async function cancelAlert(req: Request, res: Response) {
   getIo().to(`user:${userId}`).emit('alert:status_updated', {
     alertId: updated.id,
     status: 'CANCELLED',
+  })
+
+  return res.json(updated)
+}
+
+export async function declineAlert(req: Request, res: Response) {
+  const id = req.params.id as string
+  const userId = (req as any).user.userId
+
+  const alert = await prisma.alert.findUnique({ where: { id } })
+  if (!alert) return res.status(404).json({ error: 'Alerte introuvable' })
+  if (alert.responderId !== userId) return res.status(403).json({ error: 'Accès interdit' })
+  if (alert.status !== 'ASSIGNED') return res.status(409).json({ error: 'Impossible de refuser cette alerte' })
+
+  await redis.set(`responder:status:${userId}`, 'AVAILABLE')
+
+  const newResponderId = await findNearestResponder(alert.lat, alert.lng)
+
+  const updated = await prisma.alert.update({
+    where: { id },
+    data: newResponderId
+      ? { responderId: newResponderId, status: 'ASSIGNED' }
+      : { responderId: null, status: 'PENDING' },
+    include: { responder: true, caller: true },
+  })
+
+  if (newResponderId) {
+    getIo().to(`user:${newResponderId}`).emit('alert:new', {
+      alertId: updated.id,
+      lat: updated.lat,
+      lng: updated.lng,
+      emergencyType: updated.emergencyType,
+      triageLevel: updated.triageLevel,
+      caller: { name: updated.caller.name, phone: updated.caller.phone },
+    })
+  }
+
+  getIo().to(`user:${alert.callerId}`).emit('alert:status_updated', {
+    alertId: updated.id,
+    status: updated.status,
+    responder: updated.responder,
   })
 
   return res.json(updated)
