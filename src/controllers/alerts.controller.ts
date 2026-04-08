@@ -82,13 +82,8 @@ export async function createAlert(req: Request, res: Response) {
       caller: { name: updated.caller.name, phone: updated.caller.phone },
     })
 
-    try {
-      await smsQueue.add({
-        to: updated.caller.phone,
-        message: `Un secouriste a été assigné à votre alerte. Il est en route.`,
-      })
-      await sendPush(callerId, 'Secouriste assigné', 'Un secouriste a été assigné à votre alerte.')
-    } catch {}
+    smsQueue.add({ to: updated.caller.phone, message: `Un secouriste a été assigné à votre alerte. Il est en route.` }).catch(() => {})
+    sendPush(callerId, 'Secouriste assigné', 'Un secouriste a été assigné à votre alerte.').catch(() => {})
 
     return res.status(201).json(updated)
   }
@@ -157,7 +152,7 @@ export async function updateStatus(req: Request, res: Response) {
     responder: updated.responder,
   })
 
-  await sendPush(updated.callerId, 'Mise à jour de votre alerte', `Statut : ${updated.status}`)
+  sendPush(updated.callerId, 'Mise à jour de votre alerte', `Statut : ${updated.status}`).catch(() => {})
 
   return res.json(updated)
 }

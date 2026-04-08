@@ -23,7 +23,8 @@ export function setupSocket(httpServer: HttpServer) {
   io.on('connection', (socket) => {
     const user = (socket as any).user
     socket.join(`user:${user.userId}`)
-    console.log(`[Socket] Connecté — socket: ${socket.id}, userId: ${user?.userId}, room: user:${user?.userId}`)
+    if (user.role === 'PATIENT') socket.join('patients')
+    console.log(`[Socket] Connecté — socket: ${socket.id}, userId: ${user?.userId}, role: ${user?.role}`)
 
     socket.on('join', (userId: string) => {
       if (userId === user.userId) {
@@ -37,15 +38,18 @@ export function setupSocket(httpServer: HttpServer) {
       lat: number
       lng: number
     }) => {
-      // Seul le responder concerné peut mettre à jour sa position
       if (data.responderId !== user.userId) return
+
+      console.log(`[Socket] responder:update_position reçu — responderId: ${data.responderId}, lat: ${data.lat}, lng: ${data.lng}`)
 
       await redis.geoadd('responders:positions', data.lng, data.lat, data.responderId)
 
-      // Ne pas repasser AVAILABLE si le responder est BUSY sur une alerte
       const currentStatus = await redis.get(`responder:status:${data.responderId}`)
       if (currentStatus !== 'BUSY') {
         await redis.set(`responder:status:${data.responderId}`, 'AVAILABLE')
+        const patientsRoom = io.sockets.adapter.rooms.get('patients')
+        console.log(`[Socket] Emission responders:updated → room patients (${patientsRoom?.size ?? 0} socket(s))`)
+        io.to('patients').emit('responders:updated')
       }
 
       io.to(`alert:${data.alertId}`).emit('responder:position_updated', data)
