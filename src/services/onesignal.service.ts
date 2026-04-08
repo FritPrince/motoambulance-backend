@@ -12,7 +12,7 @@ export async function sendPush(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Basic ${apiKey}`,
+      Authorization: `Key ${apiKey}`,
     },
     body: JSON.stringify({
       app_id: appId,
