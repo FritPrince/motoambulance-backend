@@ -22,6 +22,7 @@ export function setupSocket(httpServer: HttpServer) {
 
   io.on('connection', (socket) => {
     const user = (socket as any).user
+    console.log(`[Socket] Nouvelle connexion — socket: ${socket.id}, userId: ${user?.userId}`)
 
     socket.on('join', (userId: string) => {
       console.log(`[Socket] join reçu — userId: ${userId}, user.userId: ${user.userId}`)
