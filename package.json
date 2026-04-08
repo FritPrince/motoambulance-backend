@@ -22,6 +22,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "@onesignal/node-onesignal": "^5.4.0",
     "@prisma/client": "^5.22.0",
     "@types/express-rate-limit": "^5.1.3",
     "africastalking": "^0.7.9",
