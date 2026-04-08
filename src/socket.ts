@@ -22,13 +22,12 @@ export function setupSocket(httpServer: HttpServer) {
 
   io.on('connection', (socket) => {
     const user = (socket as any).user
-    console.log(`[Socket] Nouvelle connexion — socket: ${socket.id}, userId: ${user?.userId}`)
+    socket.join(`user:${user.userId}`)
+    console.log(`[Socket] Connecté — socket: ${socket.id}, userId: ${user?.userId}, room: user:${user?.userId}`)
 
     socket.on('join', (userId: string) => {
-      console.log(`[Socket] join reçu — userId: ${userId}, user.userId: ${user.userId}`)
       if (userId === user.userId) {
         socket.join(`user:${userId}`)
-        console.log(`[Socket] Room rejointe : user:${userId}`)
       }
     })
 
