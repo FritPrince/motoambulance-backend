@@ -44,6 +44,23 @@ export async function getNearbyResponders(req: Request, res: Response) {
   return res.json(responders.filter(Boolean))
 }
 
+export async function setResponderStatus(req: Request, res: Response) {
+  const userId = (req as any).user.userId
+  const { status } = req.body
+
+  if (!['AVAILABLE', 'OFFLINE'].includes(status)) {
+    return res.status(400).json({ error: 'status doit être AVAILABLE ou OFFLINE' })
+  }
+
+  if (status === 'OFFLINE') {
+    await redis.del(`responder:status:${userId}`)
+  } else {
+    await redis.set(`responder:status:${userId}`, 'AVAILABLE')
+  }
+
+  return res.json({ status })
+}
+
 // POST /responders/apply — un patient soumet une demande
 export async function applyAsResponder(req: Request, res: Response) {
   const userId = (req as any).user.userId

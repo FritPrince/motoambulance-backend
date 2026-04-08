@@ -7,6 +7,7 @@ import {
   listApplications,
   reviewApplication,
   getNearbyResponders,
+  setResponderStatus,
 } from '../controllers/responders.controller'
 
 const router = Router()
@@ -15,6 +16,9 @@ const router = Router()
 router.post('/apply', requireAuth, applyAsResponder)
 router.get('/my-application', requireAuth, getMyApplication)
 router.get('/nearby', requireAuth, getNearbyResponders)
+
+// Routes secouriste
+router.patch('/me/status', requireAuth, requireRole('RESPONDER'), setResponderStatus)
 
 // Routes admin uniquement
 router.get('/applications', requireAuth, requireRole('ADMIN'), listApplications)
