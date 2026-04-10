@@ -1,25 +1,12 @@
-export async function sendPush(
-  userId: string,
-  title: string,
-  body: string,
-  data?: Record<string, string>
-) {
-  const appId = process.env.ONESIGNAL_APP_ID
-  const apiKey = process.env.ONESIGNAL_API_KEY
-  if (!appId || !apiKey) return
+import redis from '../lib/redis'
 
-  await fetch('https://onesignal.com/api/v1/notifications', {
+export async function sendPush(userId: string, title: string, body: string) {
+  const token = await redis.get(`push-token:${userId}`)
+  if (!token) return
+
+  await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Key ${apiKey}`,
-    },
-    body: JSON.stringify({
-      app_id: appId,
-      include_external_user_ids: [userId],
-      headings: { en: title },
-      contents: { en: body },
-      data,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: token, title, body, sound: 'default' }),
   }).catch(() => {})
 }

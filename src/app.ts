@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.routes'
 import alertsRoutes from './routes/alerts.routes'
 import subscriptionsRoutes from './routes/subscriptions.routes'
 import respondersRoutes from './routes/responders.routes'
+import usersRoutes from './routes/users.routes'
 
 const app = express()
 
@@ -31,5 +32,6 @@ app.use('/auth', authRoutes)
 app.use('/alerts', alertsRoutes)
 app.use('/subscriptions', subscriptionsRoutes)
 app.use('/responders', respondersRoutes)
+app.use('/users', usersRoutes)
 
 export default app
