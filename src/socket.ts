@@ -2,6 +2,7 @@ import { Server } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import redis from './lib/redis'
+import { sendPush } from './services/onesignal.service'
 
 let io: Server
 
@@ -24,6 +25,9 @@ export function setupSocket(httpServer: HttpServer) {
     const user = (socket as any).user
     socket.join(`user:${user.userId}`)
     if (user.role === 'PATIENT') socket.join('patients')
+    if (user.role === 'RESPONDER') {
+      sendPush(user.userId, 'MotoAmbulance', 'Bienvenue, vous êtes connecté en tant que secouriste.').catch(() => {})
+    }
     console.log(`[Socket] Connecté — socket: ${socket.id}, userId: ${user?.userId}, role: ${user?.role}`)
 
     socket.on('join', (userId: string) => {
